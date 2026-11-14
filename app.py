@@ -1,10 +1,12 @@
+
+
 import streamlit as st
 import random
 
 # የገጹ አቀማመጥ (Page Configuration)
 st.set_page_config(
-    page_title="Smart Quiz & Reward App",
-    page_icon="🎁",
+    page_title="Smart Quiz & Rewards App",
+    page_icon="🌟",
     layout="centered"
 )
 
@@ -23,12 +25,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ርዕስ እና መግቢያ
-st.title("🧠 Smart Quiz, Psychology & Reward App")
-st.write("እውቀትዎን እያዳበሩ፣ ጥያቄዎችን በመጨመር እና ፈተናዎችን በመፈተን ነጥብ (Points) ይሰብስቡ!")
+st.title("🌟 Smart Quiz, Psychology & Rewards Hub")
+st.write("እውቀትዎን ያዳብሩ፣ ጥያቄዎችን በመመለስ እና በማከል ነጥብ ይሰብስቡ፤ ሽልማትም ያግኙ!")
 
-# የሰስተር ስቴት (Session State) ለነጥቦች እና ለጥያቄዎች ማከማቻ
+# የሰስተር ስቴት (Session State) ለነጥቦች፣ ለጥያቄዎች እና ለተጠቃሚዎች ስም
+if "username" not in st.session_state:
+    st.session_state.username = "ተጠቃሚ"
+
 if "points" not in st.session_state:
-    st.session_state.points = 10  # ለመጀመሪያ መግቢያ የሚሆን ቦነስ ነጥብ
+    st.session_state.points = 10  # ለመጀመሪያ መግቢያ የሚሆን ቦነስ
 
 if "quiz_data" not in st.session_state:
     st.session_state.quiz_data = {
@@ -46,24 +51,27 @@ if "quiz_data" not in st.session_state:
                 "answer": "66 ቀናት"
             }
         ],
-        "Python Programming": [
+        "Tech & Business": [
             {
-                "question": "ለተጠቃሚዎች ዳታ ለማሳየት በ Streamlit የምንጠቀመው ትዕዛዝ የቱ ነው?",
-                "options": ["print()", "echo()", "st.write()", "display()"],
-                "answer": "st.write()"
+                "question": "በአሁኑ ሰዓት በዓለም አቀፍ ደረጃ በስፋት እየተሰራበት ያለው እና አዳዲስ ነገሮችን የሚፈጥረው ቴክኖሎጂ የቱ ነው?",
+                "options": ["Artificial Intelligence (AI)", "Floppy Disk", "Dial-up Internet", "Vacuum Tube"],
+                "answer": "Artificial Intelligence (AI)"
             }
         ]
     }
 
 # የጎንዮሽ ምናሌ (Sidebar Navigation)
+st.sidebar.header("⚙️ ማስተካከያ እና ምናሌ")
+st.session_state.username = st.sidebar.text_input("የእርስዎ ስም (Username):", value=st.session_state.username)
+
 menu = st.sidebar.selectbox(
-    "ምናሌ ይምረጡ (Menu):",
-    ["ፈተና መውሰድ (Take Quiz)", "ጥያቄ ማከል (Add Question)", "የኔ ነጥብ እና ሽልማት (Points & Rewards)"]
+    "ምናሌ ይምረጡ:",
+    ["ፈተና መውሰድ (Take Quiz)", "ጥያቄ ማከል (Add Question)", "የኔ ነጥብ እና ሽልማት (Rewards)", "የውጤት ሰንጠረዥ (Leaderboard)"]
 )
 
 # የነጥብ ማሳያ በሲድባር ላይ
 st.sidebar.divider()
-st.sidebar.metric(label="💰 ያገኙት ጠቅላላ ነጥብ (Points)", value=f"{st.session_state.points} ነጥብ")
+st.sidebar.metric(label="💰 ያገኙት ጠቅላላ ነጥብ", value=f"{st.session_state.points} ነጥብ")
 
 # 1. ፈተና የመውሰድ ክፍል
 if menu == "ፈተና መውሰድ (Take Quiz)":
@@ -111,22 +119,34 @@ elif menu == "ጥያቄ ማከል (Add Question)":
                     "answer": correct_ans
                 }
                 st.session_state.quiz_data[new_category].append(new_question_dict)
-                st.session_state.points += 20  # ለጥያቄ ማስተዋጽኦ የሚሰጥ ቦነስ
+                st.session_state.points += 20
                 st.success("✅ ጥያቄዎ በተሳካ ሁኔታ ታክሏል! +20 ነጥብ ተሸልመዋል!")
             else:
                 st.warning("⚠️ እባክዎ ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
 
-# 3. ነጥቦች እና ሽልማት ክፍል
-elif menu == "የኔ ነጥብ እና ሽልማት (Points & Rewards)":
-    st.subheader("🎁 የነጥብ እና የሽልማት ማዕከል")
-    st.write(f"አሁን ላይ ያሎት ጠቅላላ ሚዛን: **{st.session_state.points} ነጥብ**")
+# 3. ነጥቦች እና ሽልማት ማዕከል (Rewards with Telegram Link)
+elif menu == "የኔ ነጥብ እና ሽልማት (Rewards)":
+    st.subheader("🎁 የሽልማት ማዕከል")
+    st.write(f"ሰላም **{st.session_state.username}**! አሁን ላይ ያሎት ጠቅላላ ሚዛን: **{st.session_state.points} ነጥብ**")
     
-    st.info("💡 **እንዴት ነጥብ ማግኘት ይቻላል?**\n- ጥያቄዎችን በትክክል በመመለስ\n- አዳዲስ ጥያቄዎችን ወደ አፑ በመጨመር\n- አፑን ለጓደኞችዎ በማካፈል (Sharing)")
+    st.info("💡 **እንዴት ሽልማት ማግኘት ይቻላል?**\n- ቢያንስ **100 ነጥብ** ሲኖርዎት የሞባይል ካርድ ወይም የገንዘብ ሽልማት መጠየቅ ይችላሉ።")
     
-    if st.button("ነጥቤን ወደ ገንዘብ / የሞባይል ካርድ መቀየሪያ (Redeem) ጠይቅ"):
-        if st.session_state.points >= 100:
-            st.success("🎉 የሽልማት ጥያቄዎ ተመዝግቧል! አስተዳዳሪው በቅርቡ ያነጋግርዎታል።")
-        else:
-            st.warning("⚠️ ሽልማት ለመጠየቅ ቢያንስ 100 ነጥብ ሊኖርዎት ይገባል። እባክዎ ተጨማሪ ፈተናዎችን ይውሰዱ ወይም ጥያቄዎችን ይጨምሩ!")
+    if st.session_state.points >= 100:
+        st.success("🎉 እንኳን ደስ አለዎት! የሽልማት ገደብ (100 ነጥብ) አልፈዋል። ሽልማትዎን ለመጠየቅ ከታች ያለውን የቴሌግራም አገናኝ ይጠቀሙ።")
+        st.markdown("📲 **[ሽልማቴን በቴሌግራም ለመጠየቅ እዚህ ይጫኑ](https://t.me/Mom_me2)**")
+    else:
+        needed = 100 - st.session_state.points
+        st.warning(f"⚠️ ሽልማት ለመጠየቅ ተጨማሪ **{needed} ነጥብ** ያስፈልግዎታል። ተጨማሪ ጥያቄዎችን ይመልሱ ወይም ጥያቄዎችን ይጨምሩ!")
 
+# 4. የውጤት ሰንጠረዥ (Leaderboard)
+elif menu == "የውጤት ሰንጠረዥ (Leaderboard)":
+    st.subheader("🏆 የከፍተኛ ተጠቃሚዎች ሰንጠረዥ")
+    st.write("በአፑ ውስጥ ከፍተኛ ነጥብ የሰበሰቡ ተጠቃሚዎች ዝርዝር፦")
+    
+    leaderboard_data = {
+        "ተጠቃሚ (User)": [st.session_state.username, "አቤል (Abebe)", "ዳዊት (Dawit)", "ሰላም (Selam)"],
+        "ነጥብ (Points)": [st.session_state.points, 150, 120, 95]
+    }
+    
+    st.table(leaderboard_data)
 
