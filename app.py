@@ -1,5 +1,4 @@
 
-
 import streamlit as st
 import random
 import urllib.request
@@ -7,6 +6,10 @@ import json
 
 # Page Config
 st.set_page_config(page_title="Smart Quiz & Rewards App", page_icon="🧠", layout="centered")
+
+# --- 💡 እዚህ ጋር የራስዎን የቴሌብር ቁጥር እና ስም መቀየር ይችላሉ ---
+TELEBIRR_PHONE = "0913367787"  # <--- የእርስዎን የቴሌብር ቁጥር እዚህ ያስገቡ
+TELEBIRR_NAME = "Samuel Debela"   # <--- የባለቤቱን ስም እዚህ ያስገቡ
 
 # Initialize Session State
 if "logged_in" not in st.session_state:
@@ -17,12 +20,16 @@ if "users_db" not in st.session_state:
     st.session_state.users_db = {}
 if "score" not in st.session_state:
     st.session_state.score = 0
+if "coins" not in st.session_state:
+    st.session_state.coins = 10
 if "current_question_index" not in st.session_state:
     st.session_state.current_question_index = 0
 if "answered_questions" not in st.session_state:
     st.session_state.answered_questions = set()
+if "paid_for_more" not in st.session_state:
+    st.session_state.paid_for_more = False
 
-# --- Dynamic Question Pool with Explanations ---
+# --- Initial 5 Core Questions ---
 if "question_bank" not in st.session_state:
     st.session_state.question_bank = [
         {
@@ -54,16 +61,10 @@ if "question_bank" not in st.session_state:
             "options": ["ምድር", "ጨረቃ", "ፀሐይ", "ማርስ"],
             "answer": "ፀሐይ",
             "explanation": "የፀሐይ ስርዓት አካል የሆኑት ፕላኔቶች በሙሉ በስበት ኃይል የሚዞሩት መሃል ላይ ባለችው ፀሐይ ዙሪያ ነው።"
-        },
-        {
-            "question": "በዓለም ላይ እጅግ ረጅሙ ወንዝ የቱ ነው?",
-            "options": ["አባይ ወንዝ", "አማዞን ወንዝ", "ሚሲሲፒ ወንዝ", "ያንግትሴ ወንዝ"],
-            "answer": "አባይ ወንዝ",
-            "explanation": "አባይ (Nile) ወንዝ በዓለም ላይ ረጅሙ ወንዝ በመባል ሲታወቅ፣ በይዘቱ ግን አማዞን ቀዳሚ ነው።"
         }
     ]
 
-# --- Function to fetch online questions with smart explanations ---
+# --- Function to fetch more online questions ---
 def fetch_online_questions():
     try:
         url = "https://opentdb.com/api.php?amount=10&category=9&type=multiple"
@@ -83,30 +84,27 @@ def fetch_online_questions():
                         "question": f"[Online] {q_text}",
                         "options": options,
                         "answer": correct,
-                        "explanation": f"ይህ ጥያቄ ከኦንላይን የመጣ ሲሆን፣ ትክክለኛው መልስ '{correct}' መሆኑ በዓለም አቀፍ መረጃዎች ተረጋግጧል።"
+                        "explanation": f"ይህ ጥያቄ ከኦንላይን የመጣ ሲሆን፣ ትክክለኛው መልስ '{correct}' መሆኑ ተረጋግጧል።"
                     }
                     if not any(d['question'] == new_q['question'] for d in st.session_state.question_bank):
                         st.session_state.question_bank.append(new_q)
     except Exception as e:
         pass
 
-if len(st.session_state.question_bank) < 20:
-    fetch_online_questions()
-
 if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled_questions) == 0:
-    st.session_state.shuffled_questions = list(st.session_state.question_bank)
+    st.session_state.shuffled_questions = list(st.session_state.question_bank[:5])
     random.shuffle(st.session_state.shuffled_questions)
 
-# --- 1. AUTHENTICATION WALL ---
+# --- 1. INITIAL AUTHENTICATION WALL ---
 if not st.session_state.logged_in:
-    st.markdown("## 🔐 መግቢያ ወይም ምዝገባ (Login / Register)")
-    st.write("እባክዎ ለመቀጠል ኢሜልዎን እና ፓስወርድዎን ያስገቡ:")
+    st.markdown("## 🔐 Smart Quiz & Rewards - መግቢያ")
+    st.write("እባክዎ ለመጀመር ኢሜልዎን እና ፓስወርድዎን ያስገቡ:")
     
     with st.form("auth_form"):
         email_input = st.text_input("የኢሜል አድራሻ (Email Address)")
         password_input = st.text_input("የሚስጥር ቁጥር (Password)", type="password")
         
-        submit_btn = st.form_submit_button("አረጋግጥ (Submit)")
+        submit_btn = st.form_submit_button("ግባ (Login / Register)")
         
         if submit_btn:
             if not email_input or "@" not in email_input or "." not in email_input:
@@ -120,10 +118,10 @@ if not st.session_state.logged_in:
                 st.rerun()
     st.stop()
 
-# --- 2. MAIN QUIZ APP INTERFACE WITH EXPLANATIONS ---
+# --- 2. MAIN QUIZ APP INTERFACE ---
 st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
-st.write(f"👤 ገብተዋልበት ኢሜል: **{st.session_state.user_email}**")
-st.write(f"🏆 ያገኙት ነጥብ: **{st.session_state.score} / 100**")
+st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 🪙 ኮይኖች: **{st.session_state.coins} Coins**")
+st.write(f"🏆 ያገኙት ነጥብ: **{st.session_state.score} / 50**")
 st.markdown("---")
 
 q_idx = st.session_state.current_question_index
@@ -151,6 +149,7 @@ if q_idx < total_q:
                 if q_idx not in st.session_state.answered_questions:
                     st.success("ትክክለኛ መልስ! 🌟 +10 ነጥብ አግኝተዋል")
                     st.session_state.score += 10
+                    st.session_state.coins += 2
                     st.session_state.answered_questions.add(q_idx)
                 else:
                     st.info("ይህ ጥያቄ ቀድሞ ተመልሷል!")
@@ -162,27 +161,48 @@ if q_idx < total_q:
         if q_idx < total_q - 1:
             if st.button("Next (ቀጣይ) ➡️"):
                 st.session_state.current_question_index += 1
-                if q_idx >= total_q - 5:
-                    fetch_online_questions()
-                    st.session_state.shuffled_questions = list(st.session_state.question_bank)
                 st.rerun()
         else:
             if st.button("ጨርስ (Finish) 🏁"):
                 st.session_state.current_question_index = total_q
                 st.rerun()
 else:
-    st.success("🎉 እንኳን ደስ አለዎት! ሁሉንም ጥያቄዎች ጨርሰዋል!")
-    st.write(f"ጠቅላላ ውጤትዎ: **{st.session_state.score} ነጥብ**")
-    
-    fetch_online_questions()
-    
-    if st.session_state.score >= 50:
-        st.markdown("🎁 **100 ነጥብ ሞልተዋል? ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን!**")
-        st.markdown("ቴሌግራም አድራሻ: **@Mom_me2**")
-    
-    if st.button("እንደገና ጀምር (Play Again)"):
-        st.session_state.current_question_index = 0
-        st.session_state.answered_questions = set()
-        st.session_state.shuffled_questions = list(st.session_state.question_bank)
-        random.shuffle(st.session_state.shuffled_questions)
-        st.rerun()
+    # After finishing the first 5 questions
+    if not st.session_state.paid_for_more:
+        st.success("🎉 የመጀመሪያዎቹን 5 ጥያቄዎች ጨርሰዋል!")
+        st.write(f"ያገኙት ውጤት: **{st.session_state.score} ነጥብ**")
+        st.markdown("---")
+        st.markdown("### 🚀 ተጨማሪ ማለቂያ የሌላቸውን ጥያቄዎች ለመክፈት:")
+        st.markdown(f"💳 እባክዎ **10 ብር** ከዚህ በታች ባለው የቴሌብር ቁጥር ይክፈሉ:")
+        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 10.00 ብር")
+        
+        with st.form("pay_form"):
+            tx_id = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ")
+            pay_submit = st.form_submit_button("ክፍያ አረጋግጥ እና ተጨማሪ ጥያቄዎችን ክፈት")
+            
+            if pay_submit:
+                if tx_id:
+                    st.session_state.paid_for_more = True
+                    fetch_online_questions()
+                    st.session_state.shuffled_questions = list(st.session_state.question_bank)
+                    st.success("ክፍያዎ ተረጋግጧል! አዳዲስ ጥያቄዎች ተከፍተዋል...")
+                    st.rerun()
+                else:
+                    st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
+    else:
+        st.success("🎉 ማለቂያ የሌላቸውን ጥያቄዎች እየመለሱ ነው!")
+        st.write(f"ጠቅላላ ውጤትዎ: **{st.session_state.score} ነጥብ** | ኮይኖች: **{st.session_state.coins} Coins**")
+        
+        fetch_online_questions()
+        
+        if st.session_state.score >= 50:
+            st.markdown("🎁 **ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን!**")
+            st.markdown("ቴሌግራም አድራሻ: **@Mom_me2**")
+        
+        if st.button("እንደገና ጀምር (Play Again)"):
+            st.session_state.current_question_index = 0
+            st.session_state.answered_questions = set()
+            st.session_state.shuffled_questions = list(st.session_state.question_bank[:5])
+            st.session_state.paid_for_more = False
+            random.shuffle(st.session_state.shuffled_questions)
+            st.rerun()
