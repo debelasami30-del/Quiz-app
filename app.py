@@ -14,51 +14,59 @@ if "logged_in" not in st.session_state:
 if "user_email" not in st.session_state:
     st.session_state.user_email = ""
 if "users_db" not in st.session_state:
-    st.session_state.users_db = {} # Stores email: password
+    st.session_state.users_db = {}
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "current_question_index" not in st.session_state:
     st.session_state.current_question_index = 0
+if "answered_questions" not in st.session_state:
+    st.session_state.answered_questions = set()
 
-# --- Default Dynamic Question Pool ---
+# --- Dynamic Question Pool with Explanations ---
 if "question_bank" not in st.session_state:
     st.session_state.question_bank = [
         {
             "question": "የኢትዮጵያ ዋና ከተማ የት ናት?",
             "options": ["አዲስ አበባ", "ባህር ዳር", "ሀዋሳ", "ድሬዳዋ"],
-            "answer": "አዲስ አበባ"
+            "answer": "አዲስ አበባ",
+            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት።"
         },
         {
             "question": "በዓለም ላይ ትልቁ ውቅያኖስ የቱ ነው?",
             "options": ["አትላንቲክ ውቅያኖስ", "ፓስፊክ ውቅያኖስ", "ህንድ ውቅያኖስ", "አርክቲክ ውቅያኖስ"],
-            "answer": "ፓስፊክ ውቅያኖስ"
+            "answer": "ፓስፊክ ውቅያኖስ",
+            "explanation": "ፓስፊክ ውቅያኖስ በስፋቱም ሆነ በጥልቀቱ ከሌሎቹ ውቅያኖሶች ሁሉ የሚበልጥ ትልቁ የምድር የውሃ አካል ነው።"
         },
         {
             "question": "የሰው ልጅ አካል ትልቁ ውጫዊ አካል የቱ ነው?",
             "options": ["ልብ", "ጉበት", "ቆዳ", "አንጎል"],
-            "answer": "ቆዳ"
+            "answer": "ቆዳ",
+            "explanation": "ቆዳ የሰው አካልን ከውጪ ከሚመጡ አደጋዎች የሚከላከል እና በስፋቱ ትልቁ የሰው አካል ክፍል ነው።"
         },
         {
             "question": "የውሃ ኬሚካላዊ መጠሪያ (Chemical Formula) ምንድን ነው?",
             "options": ["CO2", "H2O", "O2", "NaCl"],
-            "answer": "H2O"
+            "answer": "H2O",
+            "explanation": "አንድ የኦክስጅን እና ሁለት የሃይድሮጅን አተሞች በመዋሃድ H2O (ውሃ) ይፈጥራሉ።"
         },
         {
             "question": "የፀሐይ ስርዓት (Solar System) መሃል ላይ የሚገኘው የቱ ነው?",
             "options": ["ምድር", "ጨረቃ", "ፀሐይ", "ማርስ"],
-            "answer": "ፀሐይ"
+            "answer": "ፀሐይ",
+            "explanation": "የፀሐይ ስርዓት አካል የሆኑት ፕላኔቶች በሙሉ በስበት ኃይል የሚዞሩት መሃል ላይ ባለችው ፀሐይ ዙሪያ ነው።"
         },
         {
             "question": "በዓለም ላይ እጅግ ረጅሙ ወንዝ የቱ ነው?",
             "options": ["አባይ ወንዝ", "አማዞን ወንዝ", "ሚሲሲፒ ወንዝ", "ያንግትሴ ወንዝ"],
-            "answer": "አባይ ወንዝ"
+            "answer": "አባይ ወንዝ",
+            "explanation": "አባይ (Nile) ወንዝ በዓለም ላይ ረጅሙ ወንዝ በመባል ሲታወቅ፣ በይዘቱ ግን አማዞን ቀዳሚ ነው።"
         }
     ]
 
-# --- Function to fetch online general knowledge questions automatically ---
+# --- Function to fetch online questions with smart explanations ---
 def fetch_online_questions():
     try:
-        url = "https://opentdb.com/api.php?amount=5&category=9&type=multiple"
+        url = "https://opentdb.com/api.php?amount=10&category=9&type=multiple"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
@@ -74,22 +82,25 @@ def fetch_online_questions():
                     new_q = {
                         "question": f"[Online] {q_text}",
                         "options": options,
-                        "answer": correct
+                        "answer": correct,
+                        "explanation": f"ይህ ጥያቄ ከኦንላይን የመጣ ሲሆን፣ ትክክለኛው መልስ '{correct}' መሆኑ በዓለም አቀፍ መረጃዎች ተረጋግጧል።"
                     }
                     if not any(d['question'] == new_q['question'] for d in st.session_state.question_bank):
                         st.session_state.question_bank.append(new_q)
     except Exception as e:
         pass
 
-if len(st.session_state.question_bank) < 15:
+if len(st.session_state.question_bank) < 20:
     fetch_online_questions()
 
-# --- 1. EMAIL & PASSWORD AUTHENTICATION WALL ---
+if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled_questions) == 0:
+    st.session_state.shuffled_questions = list(st.session_state.question_bank)
+    random.shuffle(st.session_state.shuffled_questions)
+
+# --- 1. AUTHENTICATION WALL ---
 if not st.session_state.logged_in:
     st.markdown("## 🔐 መግቢያ ወይም ምዝገባ (Login / Register)")
-    st.write("እባክዎ ለመቀጠል ኢሜልዎን እና የሚፈልጉትን ፓስወርድ ያስገቡ:")
-    
-    auth_mode = st.radio("አማራጭ ይምረጡ:", ["ግባ (Login)", "ተመዝገብ (Register)"])
+    st.write("እባክዎ ለመቀጠል ኢሜልዎን እና ፓስወርድዎን ያስገቡ:")
     
     with st.form("auth_form"):
         email_input = st.text_input("የኢሜል አድራሻ (Email Address)")
@@ -101,61 +112,64 @@ if not st.session_state.logged_in:
             if not email_input or "@" not in email_input or "." not in email_input:
                 st.error("እባክዎ ትክክለኛ ኢሜል ያስገቡ!")
             elif not password_input or len(password_input) < 4:
-                st.error("ፓስወርዱ ቢያንስ ከ 4 ፊደላት/ቁጥሮች በላይ መሆን አለበት!")
+                st.error("ፓስወርዱ ቢያንስ ከ 4 ፊደላት በላይ መሆን አለበት!")
             else:
-                if auth_mode == "ተመዝገብ (Register)":
-                    if email_input in st.session_state.users_db:
-                        st.warning("ይህ ኢሜል უკድ ተመዝግቧል! እባክዎ ይግቡ (Login)።")
-                    else:
-                        st.session_state.users_db[email_input] = password_input
-                        st.session_state.user_email = email_input
-                        st.session_state.logged_in = True
-                        st.success("ምዝገባው ተሳክቷል! ወደ አፑ እየገባ ነው...")
-                        st.rerun()
-                else: # Login
-                    if email_input in st.session_state.users_db and st.session_state.users_db[email_input] == password_input:
-                        st.session_state.user_email = email_input
-                        st.session_state.logged_in = True
-                        st.success("በተሳካ ሁኔታ ገብተዋል!")
-                        st.rerun()
-                    else:
-                        # Allow flexible first-time entry even if not pre-registered
-                        st.session_state.users_db[email_input] = password_input
-                        st.session_state.user_email = email_input
-                        st.session_state.logged_in = True
-                        st.rerun()
-    
+                st.session_state.users_db[email_input] = password_input
+                st.session_state.user_email = email_input
+                st.session_state.logged_in = True
+                st.rerun()
     st.stop()
 
-# --- 2. MAIN QUIZ APP INTERFACE ---
+# --- 2. MAIN QUIZ APP INTERFACE WITH EXPLANATIONS ---
 st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
 st.write(f"👤 ገብተዋልበት ኢሜል: **{st.session_state.user_email}**")
 st.write(f"🏆 ያገኙት ነጥብ: **{st.session_state.score} / 100**")
 st.markdown("---")
 
-if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled_questions) == 0:
-    st.session_state.shuffled_questions = list(st.session_state.question_bank)
-    random.shuffle(st.session_state.shuffled_questions)
-
 q_idx = st.session_state.current_question_index
+total_q = len(st.session_state.shuffled_questions)
 
-if q_idx < len(st.session_state.shuffled_questions):
+if q_idx < total_q:
     current_q = st.session_state.shuffled_questions[q_idx]
     
-    st.subheader(f"ጥያቄ {q_idx + 1}")
+    st.subheader(f"ጥያቄ {q_idx + 1} ከ {total_q}")
     st.write(current_q["question"])
     
-    selected_option = st.radio("መልስ ይምረጡ:", current_q["options"], key=f"q_{q_idx}_{q_idx}")
+    selected_option = st.radio("መልስ ይምረጡ:", current_q["options"], key=f"q_radio_{q_idx}")
     
-    if st.button("መልሱን ላክ (Submit)"):
-        if selected_option == current_q["answer"]:
-            st.success("ትክክለኛ መልስ! 🌟 +10 ነጥብ አግኝተዋል")
-            st.session_state.score += 10
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if q_idx > 0:
+            if st.button("⬅️ Back (ተመለስ)"):
+                st.session_state.current_question_index -= 1
+                st.rerun()
+                
+    with col2:
+        if st.button("መልስ አረጋግጥ (Submit)"):
+            if selected_option == current_q["answer"]:
+                if q_idx not in st.session_state.answered_questions:
+                    st.success("ትክክለኛ መልስ! 🌟 +10 ነጥብ አግኝተዋል")
+                    st.session_state.score += 10
+                    st.session_state.answered_questions.add(q_idx)
+                else:
+                    st.info("ይህ ጥያቄ ቀድሞ ተመልሷል!")
+            else:
+                st.error(f"ስህተት! ትክክለኛው መልስ፦ {current_q['answer']}")
+                st.info(f"💡 **ማብራሪያ:** {current_q['explanation']}")
+                
+    with col3:
+        if q_idx < total_q - 1:
+            if st.button("Next (ቀጣይ) ➡️"):
+                st.session_state.current_question_index += 1
+                if q_idx >= total_q - 5:
+                    fetch_online_questions()
+                    st.session_state.shuffled_questions = list(st.session_state.question_bank)
+                st.rerun()
         else:
-            st.error(f"ስህተት! ትክክለኛው መልስ፦ {current_q['answer']}")
-        
-        st.session_state.current_question_index += 1
-        st.rerun()
+            if st.button("ጨርስ (Finish) 🏁"):
+                st.session_state.current_question_index = total_q
+                st.rerun()
 else:
     st.success("🎉 እንኳን ደስ አለዎት! ሁሉንም ጥያቄዎች ጨርሰዋል!")
     st.write(f"ጠቅላላ ውጤትዎ: **{st.session_state.score} ነጥብ**")
@@ -166,9 +180,9 @@ else:
         st.markdown("🎁 **100 ነጥብ ሞልተዋል? ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን!**")
         st.markdown("ቴሌግራም አድራሻ: **@Mom_me2**")
     
-    if st.button("ቀጣይ ጥያቄዎችን አጫውት (Play Again)"):
+    if st.button("እንደገና ጀምር (Play Again)"):
         st.session_state.current_question_index = 0
+        st.session_state.answered_questions = set()
         st.session_state.shuffled_questions = list(st.session_state.question_bank)
         random.shuffle(st.session_state.shuffled_questions)
         st.rerun()
-
