@@ -107,3 +107,131 @@ if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled
 
 # --- 1. INITIAL AUTHENTICATION WALL ---
 if not st.session_state.logged_in:
+    st.markdown("## 🔐 Smart Quiz & Rewards - መግቢያ")
+    st.write("እባክዎ ለመጀመር ኢሜልዎን እና ፓስወርድዎን ያስገቡ:")
+    
+    with st.form("auth_form"):
+        email_input = st.text_input("የኢሜል አድራሻ (Email Address)")
+        password_input = st.text_input("የሚስጥር ቁጥር (Password)", type="password")
+        
+        submit_btn = st.form_submit_button("ግባ (Login / Register)")
+        
+        if submit_btn:
+            if not email_input or "@" not in email_input or "." not in email_input:
+                st.error("እባክዎ ትክክለኛ ኢሜል ያስገቡ!")
+            elif not password_input or len(password_input) < 4:
+                st.error("ፓስወርዱ ቢያንስ ከ 4 ፊደላት በላይ መሆን አለበት!")
+            else:
+                st.session_state.users_db[email_input] = password_input
+                st.session_state.user_email = email_input
+                st.session_state.logged_in = True
+                st.rerun()
+    st.stop()
+
+# --- 2. MAIN QUIZ APP INTERFACE ---
+st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
+st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 💰 ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
+st.write(f"🏆 ውጤት: **{st.session_state.score} ነጥብ**")
+st.markdown("---")
+
+q_idx = st.session_state.current_question_index
+total_q = len(st.session_state.shuffled_questions)
+
+if q_idx < total_q:
+    current_q = st.session_state.shuffled_questions[q_idx]
+    
+    st.subheader(f"ጥያቄ {q_idx + 1} ከ {total_q}")
+    st.write(current_q["question"])
+    
+    st.warning("⏱️ ለዚህ ጥያቄ የሚሰጥዎ ጊዜ: **10 ሰከንድ**")
+    
+    selected_option = st.radio("መልስ ይምረጡ:", current_q["options"], key=f"q_radio_{q_idx}")
+    
+    if st.button("መልስ አረጋግጥ (Submit)"):
+        if selected_option == current_q["answer"]:
+            if q_idx not in st.session_state.answered_questions:
+                st.success("ትክክለኛ መልስ! 🌟 +0.001 ብር እና +10 ነጥብ አግኝተዋል")
+                st.session_state.score += 10
+                st.session_state.money_earned += 0.001
+                st.session_state.answered_questions.add(q_idx)
+            else:
+                st.info("ይህ ጥያቄ ቀድሞ ተመልሷል!")
+        else:
+            st.error(f"ስህተት! ትክክለኛው መልስ፦ {current_q['answer']}")
+            st.info(f"💡 **ማብራሪያ:** {current_q['explanation']}")
+        
+        with st.spinner("⏳ ወደ ቀጣይ ጥያቄ በ 5 ሰከንድ ውስጥ እያለፈ ነው..."):
+            time.sleep(5)
+        
+        st.session_state.current_question_index += 1
+        st.rerun()
+else:
+    if not st.session_state.paid_for_more:
+        st.success("🎉 የመጀመሪያዎቹን 5 ጥያቄዎች ጨርሰዋል!")
+        st.write(f"ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
+        st.markdown("---")
+        st.markdown("### 🚀 ተጨማሪ ማለቂያ የሌላቸውን ጥያቄዎች ለመክፈት:")
+        st.markdown(f"💳 እባክዎ **10 ብር** በቴሌብር ይክፈሉ:")
+        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 10.00 ብር")
+        
+        with st.form("pay_form"):
+            tx_id = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ")
+            pay_submit = st.form_submit_button("ክፍያ አረጋግጥ እና ተጨማሪ ጥያቄዎችን ክፈት")
+            
+            if pay_submit:
+                if tx_id:
+                    st.session_state.paid_for_more = True
+                    fetch_online_questions()
+                    st.session_state.shuffled_questions = list(st.session_state.question_bank)
+                    st.success("ክፍያዎ ተረጋግጧል! አዳዲስ ጥያቄዎች ተከፍተዋል...")
+                    st.rerun()
+                else:
+                    st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
+    else:
+        st.success("🎉 ማለቂያ የሌላቸውን ጥያቄዎች እየመለሱ ነው!")
+        st.write(f"ጠቅላላ ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
+        
+        fetch_online_questions()
+        
+        st.markdown("---")
+        st.markdown("### ✍️ የራስዎን ጥያቄ ወደ አፑ መጨመር ይፈልጋሉ? (50 ብር)")
+        st.markdown(f"💳 **50 ብር** ከዚህ በታች ባለው ቁጥር በመላክ የጥያቄ ማካተቻ ፎርሙን ይሙሉ:")
+        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 50.00 ብር")
+        
+        with st.form("add_question_form"):
+            user_tx = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 50 ብር)")
+            new_q_text = st.text_input("የጥያቄው ጽሑፍ (Question)")
+            opt1 = st.text_input("አማራጭ 1 (Option 1)")
+            opt2 = st.text_input("አማራጭ 2 (Option 2)")
+            opt3 = st.text_input("አማራጭ 3 (Option 3)")
+            opt4 = st.text_input("አማራጭ 4 (Option 4)")
+            correct_ans = st.text_input("ትክክለኛው መልስ (Exact Correct Answer from above options)")
+            explanation_text = st.text_area("የመልሱ ማብራሪያ (Explanation)")
+            
+            submit_custom_q = st.form_submit_button("ጥያቄውን ወደ አፑ ጨምር")
+            
+            if submit_custom_q:
+                if user_tx and new_q_text and opt1 and opt2 and opt3 and opt4 and correct_ans:
+                    custom_question = {
+                        "question": f"[User Added] {new_q_text}",
+                        "options": [opt1, opt2, opt3, opt4],
+                        "answer": correct_ans,
+                        "explanation": explanation_text if explanation_text else "ይህ ጥያቄ በተጠቃሚ የተጨመረ ነው።",
+                        "reward": 0.001
+                    }
+                    st.session_state.question_bank.append(custom_question)
+                    st.session_state.shuffled_questions.append(custom_question)
+                    st.success("🎉 ጥያቄዎ በተሳካ ሁኔታ ወደ አፑ ተጨምሯል! ጨዋታውን መቀጠል ይችላሉ።")
+                else:
+                    st.error("እባክዎ ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
+
+        if st.session_state.money_earned >= 0.05:
+            st.markdown(f"🎁 **ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን:** `{TELEGRAM_CONTACT}`")
+        
+        if st.button("እንደገና ጀምር (Play Again)"):
+            st.session_state.current_question_index = 0
+            st.session_state.answered_questions = set()
+            st.session_state.shuffled_questions = list(st.session_state.question_bank[:5])
+            st.session_state.paid_for_more = False
+            random.shuffle(st.session_state.shuffled_questions)
+            st.rerun()
