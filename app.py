@@ -1,5 +1,5 @@
 
- import streamlit as st
+import streamlit as st
 import random
 import urllib.request
 import json
@@ -107,5 +107,3 @@ if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled
 
 # --- 1. INITIAL AUTHENTICATION WALL ---
 if not st.session_state.logged_in:
-    
-   
