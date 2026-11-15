@@ -3,13 +3,15 @@ import streamlit as st
 import random
 import urllib.request
 import json
+import time
 
 # Page Config
 st.set_page_config(page_title="Smart Quiz & Rewards App", page_icon="🧠", layout="centered")
 
-# --- 💡 እዚህ ጋር የራስዎን የቴሌብር ቁጥር እና ስም መቀየር ይችላሉ ---
-TELEBIRR_PHONE = "0913367787"  # <--- የእርስዎን የቴሌብር ቁጥር እዚህ ያስገቡ
+# --- 💡 የቴሌብር እና የቴሌግራም መረጃዎችዎ (እዚህ ጋር ማስተካከል ይቻላል) ---
+TELEBIRR_PHONE = "0913367787"  # <--- የእርስዎን ትክክለኛ የቴሌብር ቁጥር እዚህ ያስገቡ
 TELEBIRR_NAME = "Samuel Debela"   # <--- የባለቤቱን ስም እዚህ ያስገቡ
+TELEGRAM_CONTACT = "@Mom_me2"
 
 # Initialize Session State
 if "logged_in" not in st.session_state:
@@ -20,6 +22,8 @@ if "users_db" not in st.session_state:
     st.session_state.users_db = {}
 if "score" not in st.session_state:
     st.session_state.score = 0
+if "money_earned" not in st.session_state:
+    st.session_state.money_earned = 0.0  # Money earned in Birr
 if "coins" not in st.session_state:
     st.session_state.coins = 10
 if "current_question_index" not in st.session_state:
@@ -36,31 +40,36 @@ if "question_bank" not in st.session_state:
             "question": "የኢትዮጵያ ዋና ከተማ የት ናት?",
             "options": ["አዲስ አበባ", "ባህር ዳር", "ሀዋሳ", "ድሬዳዋ"],
             "answer": "አዲስ አበባ",
-            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት።"
+            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት።",
+            "reward": 0.001
         },
         {
             "question": "በዓለም ላይ ትልቁ ውቅያኖስ የቱ ነው?",
             "options": ["አትላንቲክ ውቅያኖስ", "ፓስፊክ ውቅያኖስ", "ህንድ ውቅያኖስ", "አርክቲክ ውቅያኖስ"],
             "answer": "ፓስፊክ ውቅያኖስ",
-            "explanation": "ፓስፊክ ውቅያኖስ በስፋቱም ሆነ በጥልቀቱ ከሌሎቹ ውቅያኖሶች ሁሉ የሚበልጥ ትልቁ የምድር የውሃ አካል ነው።"
+            "explanation": "ፓስፊክ ውቅያኖስ በስፋቱም ሆነ በጥልቀቱ ከሌሎቹ ውቅያኖሶች ሁሉ የሚበልጥ ትልቁ የምድር የውሃ አካል ነው።",
+            "reward": 0.001
         },
         {
             "question": "የሰው ልጅ አካል ትልቁ ውጫዊ አካል የቱ ነው?",
             "options": ["ልብ", "ጉበት", "ቆዳ", "አንጎል"],
             "answer": "ቆዳ",
-            "explanation": "ቆዳ የሰው አካልን ከውጪ ከሚመጡ አደጋዎች የሚከላከል እና በስፋቱ ትልቁ የሰው አካል ክፍል ነው።"
+            "explanation": "ቆዳ የሰው አካልን ከውጪ ከሚመጡ አደጋዎች የሚከላከል እና በስፋቱ ትልቁ የሰው አካል ክፍል ነው።",
+            "reward": 0.001
         },
         {
             "question": "የውሃ ኬሚካላዊ መጠሪያ (Chemical Formula) ምንድን ነው?",
             "options": ["CO2", "H2O", "O2", "NaCl"],
             "answer": "H2O",
-            "explanation": "አንድ የኦክስጅን እና ሁለት የሃይድሮጅን አተሞች በመዋሃድ H2O (ውሃ) ይፈጥራሉ።"
+            "explanation": "አንድ የኦክስጅን እና ሁለት የሃይድሮጅን አተሞች በመዋሃድ H2O (ውሃ) ይፈጥራሉ።",
+            "reward": 0.001
         },
         {
             "question": "የፀሐይ ስርዓት (Solar System) መሃል ላይ የሚገኘው የቱ ነው?",
             "options": ["ምድር", "ጨረቃ", "ፀሐይ", "ማርስ"],
             "answer": "ፀሐይ",
-            "explanation": "የፀሐይ ስርዓት አካል የሆኑት ፕላኔቶች በሙሉ በስበት ኃይል የሚዞሩት መሃል ላይ ባለችው ፀሐይ ዙሪያ ነው።"
+            "explanation": "የፀሐይ ስርዓት አካል የሆኑት ፕላኔቶች በሙሉ በስበት ኃይል የሚዞሩት መሃል ላይ ባለችው ፀሐይ ዙሪያ ነው።",
+            "reward": 0.001
         }
     ]
 
@@ -84,7 +93,8 @@ def fetch_online_questions():
                         "question": f"[Online] {q_text}",
                         "options": options,
                         "answer": correct,
-                        "explanation": f"ይህ ጥያቄ ከኦንላይን የመጣ ሲሆን፣ ትክክለኛው መልስ '{correct}' መሆኑ ተረጋግጧል።"
+                        "explanation": f"ይህ ጥያቄ ከኦንላይን የመጣ ሲሆን፣ ትክክለኛው መልስ '{correct}' መሆኑ ተረጋግጧል።",
+                        "reward": 0.001
                     }
                     if not any(d['question'] == new_q['question'] for d in st.session_state.question_bank):
                         st.session_state.question_bank.append(new_q)
@@ -120,8 +130,8 @@ if not st.session_state.logged_in:
 
 # --- 2. MAIN QUIZ APP INTERFACE ---
 st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
-st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 🪙 ኮይኖች: **{st.session_state.coins} Coins**")
-st.write(f"🏆 ያገኙት ነጥብ: **{st.session_state.score} / 50**")
+st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 💰 ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
+st.write(f"🏆 ውጤት: **{st.session_state.score} ነጥብ**")
 st.markdown("---")
 
 q_idx = st.session_state.current_question_index
@@ -133,47 +143,37 @@ if q_idx < total_q:
     st.subheader(f"ጥያቄ {q_idx + 1} ከ {total_q}")
     st.write(current_q["question"])
     
+    st.warning("⏱️ ለዚህ ጥያቄ የሚሰጥዎ ጊዜ: **30 ሰከንድ**")
+    
     selected_option = st.radio("መልስ ይምረጡ:", current_q["options"], key=f"q_radio_{q_idx}")
     
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if q_idx > 0:
-            if st.button("⬅️ Back (ተመለስ)"):
-                st.session_state.current_question_index -= 1
-                st.rerun()
-                
-    with col2:
-        if st.button("መልስ አረጋግጥ (Submit)"):
-            if selected_option == current_q["answer"]:
-                if q_idx not in st.session_state.answered_questions:
-                    st.success("ትክክለኛ መልስ! 🌟 +10 ነጥብ አግኝተዋል")
-                    st.session_state.score += 10
-                    st.session_state.coins += 2
-                    st.session_state.answered_questions.add(q_idx)
-                else:
-                    st.info("ይህ ጥያቄ ቀድሞ ተመልሷል!")
+    if st.button("መልስ አረጋግጥ (Submit)"):
+        if selected_option == current_q["answer"]:
+            if q_idx not in st.session_state.answered_questions:
+                st.success("ትክክለኛ መልስ! 🌟 +0.001 ብር እና +10 ነጥብ አግኝተዋል")
+                st.session_state.score += 10
+                st.session_state.money_earned += 0.001
+                st.session_state.answered_questions.add(q_idx)
             else:
-                st.error(f"ስህተት! ትክክለኛው መልስ፦ {current_q['answer']}")
-                st.info(f"💡 **ማብራሪያ:** {current_q['explanation']}")
-                
-    with col3:
-        if q_idx < total_q - 1:
-            if st.button("Next (ቀጣይ) ➡️"):
-                st.session_state.current_question_index += 1
-                st.rerun()
+                st.info("ይህ ጥያቄ ቀድሞ ተመልሷል!")
         else:
-            if st.button("ጨርስ (Finish) 🏁"):
-                st.session_state.current_question_index = total_q
-                st.rerun()
+            st.error(f"ስህተት! ትክክለኛው መልስ፦ {current_q['answer']}")
+            st.info(f"💡 **ማብራሪያ:** {current_q['explanation']}")
+        
+        # --- 5 Seconds Auto-Advance Delay ---
+        with st.spinner("⏳ ወደ ቀጣይ ጥያቄ በ 5 ሰከንድ ውስጥ እያለፈ ነው..."):
+            time.sleep(5)
+        
+        st.session_state.current_question_index += 1
+        st.rerun()
 else:
-    # After finishing the first 5 questions
+    # After finishing the core questions
     if not st.session_state.paid_for_more:
         st.success("🎉 የመጀመሪያዎቹን 5 ጥያቄዎች ጨርሰዋል!")
-        st.write(f"ያገኙት ውጤት: **{st.session_state.score} ነጥብ**")
+        st.write(f"ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
         st.markdown("---")
         st.markdown("### 🚀 ተጨማሪ ማለቂያ የሌላቸውን ጥያቄዎች ለመክፈት:")
-        st.markdown(f"💳 እባክዎ **10 ብር** ከዚህ በታች ባለው የቴሌብር ቁጥር ይክፈሉ:")
+        st.markdown(f"💳 እባክዎ **10 ብር** በቴሌብር ይክፈሉ:")
         st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 10.00 ብር")
         
         with st.form("pay_form"):
@@ -191,13 +191,12 @@ else:
                     st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
     else:
         st.success("🎉 ማለቂያ የሌላቸውን ጥያቄዎች እየመለሱ ነው!")
-        st.write(f"ጠቅላላ ውጤትዎ: **{st.session_state.score} ነጥብ** | ኮይኖች: **{st.session_state.coins} Coins**")
+        st.write(f"ጠቅላላ ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
         
         fetch_online_questions()
         
-        if st.session_state.score >= 50:
-            st.markdown("🎁 **ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን!**")
-            st.markdown("ቴሌግራም አድራሻ: **@Mom_me2**")
+        if st.session_state.money_earned >= 0.05:
+            st.markdown(f"🎁 **ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን:** `{TELEGRAM_CONTACT}`")
         
         if st.button("እንደገና ጀምር (Play Again)"):
             st.session_state.current_question_index = 0
