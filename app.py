@@ -23,7 +23,7 @@ if "users_db" not in st.session_state:
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "money_earned" not in st.session_state:
-    st.session_state.money_earned = 0.0  # Money earned in Birr
+    st.session_state.money_earned = 0.0
 if "coins" not in st.session_state:
     st.session_state.coins = 10
 if "current_question_index" not in st.session_state:
@@ -195,6 +195,38 @@ else:
         
         fetch_online_questions()
         
+        st.markdown("---")
+        st.markdown("### ✍️ የራስዎን ጥያቄ ወደ አፑ መጨመር ይፈልጋሉ? (50 ብር)")
+        st.markdown(f"💳 **50 ብር** ከዚህ በታች ባለው ቁጥር በመላክ የጥያቄ ማካተቻ ፎርሙን ይሙሉ:")
+        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 50.00 ብር")
+        
+        with st.form("add_question_form"):
+            user_tx = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 50 ብር)")
+            new_q_text = st.text_input("የጥያቄው ጽሑፍ (Question)")
+            opt1 = st.text_input("አማራጭ 1 (Option 1)")
+            opt2 = st.text_input("አማራጭ 2 (Option 2)")
+            opt3 = st.text_input("አማራጭ 3 (Option 3)")
+            opt4 = st.text_input("አማራጭ 4 (Option 4)")
+            correct_ans = st.text_input("ትክክለኛው መልስ (Exact Correct Answer from above options)")
+            explanation_text = st.text_area("የመልሱ ማብራሪያ (Explanation)")
+            
+            submit_custom_q = st.form_submit_button("ጥያቄውን ወደ አፑ ጨምር")
+            
+            if submit_custom_q:
+                if user_tx and new_q_text and opt1 and opt2 and opt3 and opt4 and correct_ans:
+                    custom_question = {
+                        "question": f"[User Added] {new_q_text}",
+                        "options": [opt1, opt2, opt3, opt4],
+                        "answer": correct_ans,
+                        "explanation": explanation_text if explanation_text else "ይህ ጥያቄ በተጠቃሚ የተጨመረ ነው።",
+                        "reward": 0.001
+                    }
+                    st.session_state.question_bank.append(custom_question)
+                    st.session_state.shuffled_questions.append(custom_question)
+                    st.success("🎉 ጥያቄዎ በተሳካ ሁኔታ ወደ አፑ ተጨምሯል! ጨዋታውን መቀጠል ይችላሉ።")
+                else:
+                    st.error("እባክዎ ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
+
         if st.session_state.money_earned >= 0.05:
             st.markdown(f"🎁 **ሽልማትዎን ለመውሰድ ቴሌግራም ላይ ያነጋግሩን:** `{TELEGRAM_CONTACT}`")
         
