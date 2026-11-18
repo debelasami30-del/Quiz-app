@@ -104,16 +104,16 @@ if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled
     st.session_state.shuffled_questions = list(st.session_state.question_bank[:5])
     random.shuffle(st.session_state.shuffled_questions)
 
-# --- 1. INITIAL AUTHENTICATION & ENTRY FEE WALL (10 Birr) ---
+# --- 1. INITIAL AUTHENTICATION & SHORTCODE PAYMENT WALL (10 Birr) ---
 if not st.session_state.logged_in:
     st.markdown("## 🔐 Smart Quiz & Rewards - መግቢያ (10 ብር)")
-    st.write("እባክዎ ለመጀመር የ 10 ብር ክፍያ ፈጽመው መረጃዎትን ያስገቡ:")
-    st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 10.00 ብር")
+    st.info(f"💳 **የቴሌብር ክፍያ ማሳሰቢያ:**\n1. ገንዘቡን ወደዚህ ቁጥር ያስተላልፉ: **{TELEBIRR_PHONE}** ({TELEBIRR_NAME})\n2. ከቴሌብር የሚመጣለትን ወይም የሾርት ኮድ ማረጋገጫ ቁጥር ከታች ያስገቡ።")
     
     with st.form("auth_form"):
         email_input = st.text_input("የኢሜል አድራሻ (Email Address)")
         password_input = st.text_input("የሚስጥር ቁጥር (Password)", type="password")
-        tx_entry = st.text_input("የመግቢያ ቴሌብር ትራንዛክሽን ቁጥር (TX ID)")
+        payer_phone = st.text_input("የእርስዎ የቴሌብር ስልክ ቁጥር (ለምሳሌ: 0912345678)")
+        ussd_code = st.text_input("የቴሌብር ማረጋገጫ ሾርት ኮድ / የክፍያ ማረጋገጫ (ለምሳሌ: *127# ወይም ሩብ ኮድ)")
         
         submit_btn = st.form_submit_button("ክፍያ አረጋግጥ እና ጀምር")
         
@@ -122,13 +122,15 @@ if not st.session_state.logged_in:
                 st.error("እባክዎ ትክክለኛ ኢሜል ያስገቡ!")
             elif not password_input or len(password_input) < 4:
                 st.error("ፓስወርዱ ቢያንስ ከ 4 ፊደላት በላይ መሆን አለበት!")
-            elif not tx_entry:
-                st.error("እባክዎ የ 10 ብር የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
+            elif not payer_phone or len(payer_phone) < 9:
+                st.error("እባክዎ ትክክለኛ ስልክ ቁጥር ያስገቡ!")
+            elif not ussd_code:
+                st.error("እባክዎ የቴሌብር ማረጋገጫ ሾርት ኮድ/ቁጥር ያስገቡ!")
             else:
                 st.session_state.users_db[email_input] = password_input
                 st.session_state.user_email = email_input
                 st.session_state.logged_in = True
-                st.success("ክፍያዎ ተረጋግጧል! ወደ ጨዋታው እየገባ ነው...")
+                st.success("ክፍያዎ በሾርት ኮድ ተረጋግጧል! ወደ ጨዋታው እየገባ ነው...")
                 st.rerun()
     st.stop()
 
@@ -137,7 +139,7 @@ st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
 st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 💰 ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
 st.write(f"🏆 ውጤት: **{st.session_state.score} ነጥብ**")
 
-# Admin / Total Users Counter view
+# Total registered users counter view
 total_registered_users = len(st.session_state.users_db)
 st.write(f"📊 አጠቃላይ አፑን የተጠቀሙ ሰዎች ብዛት: {total_registered_users}")
 st.markdown("---")
@@ -180,41 +182,43 @@ else:
     
     # --- TIER UPGRADES (20 Birr & 30 Birr Options) ---
     if st.session_state.tier_unlocked == 1:
-        st.markdown("### 🚀 ተጨማሪ ተጨማሪ ጥያቄዎችን ለመክፈት (20 ብር):")
-        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 20.00 ብር")
+        st.markdown("### 🚀 ተጨማሪ ጥያቄዎችን ለመክፈት (20 ብር):")
+        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}` | **ስም:** {TELEBIRR_NAME}")
         
         with st.form("tier2_form"):
-            tx_20 = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 20 ብር)")
-            submit_20 = st.form_submit_button("20 ብር ከፍሎ ተጨማሪ ጥያቄዎችን ክፈት")
+            phone_20 = st.text_input("የቴሌብር ስልክ ቁጥር (ለ 20 ብር)")
+            code_20 = st.text_input("የቴሌብር ማረጋገጫ ሾርት ኮድ (USSD/SMS Code)")
+            submit_20 = st.form_submit_button("20 ብር ክፍያ አረጋግጥ እና ክፈት")
             
             if submit_20:
-                if tx_20:
+                if phone_20 and code_20:
                     st.session_state.tier_unlocked = 2
                     fetch_online_questions()
                     st.session_state.shuffled_questions = list(st.session_state.question_bank)
-                    st.success("ክፍያዎ ተረጋግጧል! 20 ብር ጥያቄዎች ተከፍተዋል...")
+                    st.success("ክፍያዎ በሾርት ኮድ ተረጋግጧል! 20 ብር ጥያቄዎች ተከፍተዋል...")
                     st.rerun()
                 else:
-                    st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር ያስገቡ!")
+                    st.error("እባክዎ ስልክ ቁጥር እና የሾርት ኮድ ቁጥር በትክክል ይሙሉ!")
                     
     elif st.session_state.tier_unlocked == 2:
         st.markdown("### 🔥 ልዩ ተጨማሪ (Advanced) ጥያቄዎችን ለመክፈት (30 ብር):")
-        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 30.00 ብር")
+        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}` | **ስም:** {TELEBIRR_NAME}")
         
         with st.form("tier3_form"):
-            tx_30 = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 30 ብር)")
-            submit_30 = st.form_submit_button("30 ብር ከፍሎ ልዩ ጥያቄዎችን ክፈት")
+            phone_30 = st.text_input("የቴሌብር ስልክ ቁጥር (ለ 30 ብር)")
+            code_30 = st.text_input("የቴሌብር ማረጋገጫ ሾርት ኮድ (USSD/SMS Code)")
+            submit_30 = st.form_submit_button("30 ብር ክፍያ አረጋግጥ እና ክፈት")
             
             if submit_30:
-                if tx_30:
+                if phone_30 and code_30:
                     st.session_state.tier_unlocked = 3
                     fetch_online_questions()
                     fetch_online_questions()
                     st.session_state.shuffled_questions = list(st.session_state.question_bank)
-                    st.success("ክፍያዎ ተረጋግጧል! 30 ብር ልዩ ጥያቄዎች ተከፍተዋል...")
+                    st.success("ክፍያዎ በሾርት ኮድ ተረጋግጧል! 30 ብር ልዩ ጥያቄዎች ተከፍተዋል...")
                     st.rerun()
                 else:
-                    st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር ያስገቡ!")
+                    st.error("እባክዎ ስልክ ቁጥር እና የሾርት ኮድ ቁጥር በትክክል ይሙሉ!")
     else:
         st.success("🌟 ሁሉንም ከፍተኛ ደረጃ ጥያቄዎች ከፍተዋል!")
 
@@ -228,10 +232,11 @@ else:
 
     st.markdown("---")
     st.markdown("### ✍️ የራስዎን ጥያቄ ወደ አፑ መጨመር ይፈልጋሉ? (50 ብር)")
-    st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 50.00 ብር")
+    st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}` | **ስም:** {TELEBIRR_NAME}")
     
     with st.form("add_question_form"):
-        user_tx = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 50 ብር)")
+        phone_50 = st.text_input("የቴሌብር ስልክ ቁጥር (ለ 50 ብር)")
+        code_50 = st.text_input("የቴሌብር ማረጋገጫ ሾርት ኮድ (USSD/SMS Code)")
         new_q_text = st.text_input("የጥያቄው ጽሑፍ (Question)")
         opt1 = st.text_input("አማራጭ 1 (Option 1)")
         opt2 = st.text_input("አማራጭ 2 (Option 2)")
@@ -243,7 +248,7 @@ else:
         submit_custom_q = st.form_submit_button("ጥያቄውን ወደ አፑ ጨምር")
         
         if submit_custom_q:
-            if user_tx and new_q_text and opt1 and opt2 and opt3 and opt4 and correct_ans:
+            if phone_50 and code_50 and new_q_text and opt1 and opt2 and opt3 and opt4 and correct_ans:
                 custom_question = {
                     "question": f"[User Added] {new_q_text}",
                     "options": [opt1, opt2, opt3, opt4],
@@ -255,7 +260,7 @@ else:
                 st.session_state.shuffled_questions.append(custom_question)
                 st.success("🎉 ጥያቄዎ በተሳካ ሁኔታ ወደ አፑ ተጨምሯል!")
             else:
-                st.error("እባክዎ ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
+                st.error("እባክዎ የቴሌብር ቁጥር፣ ሾርት ኮድ እና ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
 
     if st.button("እንደገና ጀምር (Play Again)"):
         st.session_state.current_question_index = 0
