@@ -39,7 +39,7 @@ if "question_bank" not in st.session_state:
             "question": "የኢትዮጵያ ዋና ከተማ የት ናት?",
             "options": ["አዲስ አበባ", "ባህር ዳር", "ሀዋሳ", "ድሬዳዋ"],
             "answer": "አዲስ አበባ",
-            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት。",
+            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት።",
             "reward": 0.001
         },
         {
@@ -136,6 +136,10 @@ if not st.session_state.logged_in:
 st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
 st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 💰 ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
 st.write(f"🏆 ውጤት: **{st.session_state.score} ነጥብ**")
+
+# Admin / Total Users Counter view
+total_registered_users = len(st.session_state.users_db)
+st.write(f"📊 አጠቃላይ አፑን የተጠቀሙ ሰዎች ብዛት: {total_registered_users}")
 st.markdown("---")
 
 q_idx = st.session_state.current_question_index
