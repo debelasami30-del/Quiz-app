@@ -7,9 +7,12 @@ import time
 # Page Config
 st.set_page_config(page_title="Smart Quiz & Rewards App", page_icon="🧠", layout="centered")
 
-# --- 💡 የእርስዎ የቴሌብር እና የቴሌግራም መረጃዎች ---
+# --- 💡 የእርስዎ የቴሌብር፣ የባንክ እና የቴሌግራም መረጃዎች ---
 TELEBIRR_PHONE = "0913367787"
 TELEBIRR_NAME = "Samuel Debela"
+BANK_NAME = "Bank of Abyssinia"
+BANK_ACCOUNT = "272833141"
+BANK_HOLDER = "Samuel Debela"
 TELEGRAM_CONTACT = "@Mom_me2"
 
 # Initialize Session State
@@ -32,6 +35,14 @@ if "answered_questions" not in st.session_state:
 if "tier_unlocked" not in st.session_state:
     st.session_state.tier_unlocked = 1  # 1: Normal, 2: 20 Birr Tier, 3: 30 Birr Tier
 
+def show_payment_info(amount_birr):
+    st.info(
+        f"💰 **የሚከፈል መጠን:** {amount_birr} ብር\n\n"
+        f"📱 **ቴሌብር:** `{TELEBIRR_PHONE}` | **ስም:** {TELEBIRR_NAME}\n\n"
+        f"🏦 **ባንክ:** {BANK_NAME} | **አካውንት:** `{BANK_ACCOUNT}` | **ስም:** {BANK_HOLDER}\n\n"
+        f"🌍 **ቴሌብር/ባንክ የሌላቸው ወይም ከውጭ:** ቴሌግራም ላይ ያነጋግሩን: `{TELEGRAM_CONTACT}`"
+    )
+
 # --- Initial 5 Core Questions ---
 if "question_bank" not in st.session_state:
     st.session_state.question_bank = [
@@ -39,7 +50,7 @@ if "question_bank" not in st.session_state:
             "question": "የኢትዮጵያ ዋና ከተማ የት ናት?",
             "options": ["አዲስ አበባ", "ባህር ዳር", "ሀዋሳ", "ድሬዳዋ"],
             "answer": "አዲስ አበባ",
-            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት。",
+            "explanation": "አዲስ አበባ ከ 1879 ዓ.ም ጀምሮ የኢትዮጵያ ፖለቲካዊ፣ ኢኮኖሚያዊ እና የባህል ማዕከል እንዲሁም ዋና ከተማ ናት።",
             "reward": 0.001
         },
         {
@@ -77,9 +88,9 @@ def fetch_online_questions():
     try:
         url = "https://opentdb.com/api.php?amount=15&category=9&type=multiple"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
-            if data["results"]:
+            if data.get("results"):
                 for item in data["results"]:
                     q_text = item["question"].replace("&quot;", '"').replace("&#039;", "'")
                     correct = item["correct_answer"].replace("&quot;", '"').replace("&#039;", "'")
@@ -97,7 +108,7 @@ def fetch_online_questions():
                     }
                     if not any(d['question'] == new_q['question'] for d in st.session_state.question_bank):
                         st.session_state.question_bank.append(new_q)
-    except Exception as e:
+    except Exception:
         pass
 
 if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled_questions) == 0:
@@ -107,12 +118,13 @@ if "shuffled_questions" not in st.session_state or len(st.session_state.shuffled
 # --- 1. INITIAL AUTHENTICATION & ENTRY FEE WALL (10 Birr) ---
 if not st.session_state.logged_in:
     st.markdown("## 🔐 Smart Quiz & Rewards - መግቢያ (10 ብር)")
-    st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **የመግቢያ ክፍያ:** 10.00 ብር")
+    show_payment_info("10.00")
     
     with st.form("auth_form"):
         email_input = st.text_input("የኢሜል አድራሻ (Email Address)")
         password_input = st.text_input("የሚስጥር ቁጥር (Password)", type="password")
-        tx_entry = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID)")
+        payment_method = st.selectbox("የክፍያ መንገድ ይምረጡ", ["ቴሌብር (Telebirr)", "ባንክ (Bank Transfer)", "ሌላ / ቴሌግራም"])
+        tx_entry = st.text_input("የክፍያ ማረጋገጫ / ትራንዛክሽን ቁጥር (TX ID)")
         
         submit_btn = st.form_submit_button("ክፍያ አረጋግጥ እና ጀምር")
         
@@ -122,7 +134,7 @@ if not st.session_state.logged_in:
             elif not password_input or len(password_input) < 4:
                 st.error("ፓስወርዱ ቢያንስ ከ 4 ፊደላት በላይ መሆን አለበት!")
             elif not tx_entry:
-                st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
+                st.error("እባክዎ የክፍያ ማረጋገጫ / ትራንዛክሽን ቁጥር ያስገቡ!")
             else:
                 st.session_state.users_db[email_input] = password_input
                 st.session_state.user_email = email_input
@@ -136,7 +148,6 @@ st.markdown("⭐️ **Smart Quiz, Psychology & Rewards Hub**")
 st.write(f"👤 ተጠቃሚ: **{st.session_state.user_email}** | 💰 ያገኙት ገንዘብ: **{st.session_state.money_earned:.4f} ብር**")
 st.write(f"🏆 ውጤት: **{st.session_state.score} ነጥብ**")
 
-# Total registered users counter view
 total_registered_users = len(st.session_state.users_db)
 st.write(f"📊 አጠቃላይ አፑን የተጠቀሙ ሰዎች ብዛት: {total_registered_users}")
 st.markdown("---")
@@ -180,10 +191,11 @@ else:
     # --- TIER UPGRADES (20 Birr & 30 Birr Options) ---
     if st.session_state.tier_unlocked == 1:
         st.markdown("### 🚀 ተጨማሪ ጥያቄዎችን ለመክፈት (20 ብር):")
-        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 20.00 ብር")
+        show_payment_info("20.00")
         
         with st.form("tier2_form"):
-            tx_20 = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 20 ብር)")
+            method_20 = st.selectbox("የክፍያ መንገድ (20 ብር)", ["ቴሌብር (Telebirr)", "ባንክ (Bank Transfer)", "ሌላ / ቴሌግራም"], key="m20")
+            tx_20 = st.text_input("የክፍያ ማረጋገጫ / TX ID (ለ 20 ብር)")
             submit_20 = st.form_submit_button("20 ብር ከፍሎ ተጨማሪ ጥያቄዎችን ክፈት")
             
             if submit_20:
@@ -194,14 +206,15 @@ else:
                     st.success("ክፍያዎ ተረጋግጧል! 20 ብር ጥያቄዎች ተከፍተዋል...")
                     st.rerun()
                 else:
-                    st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
+                    st.error("እባክዎ የክፍያ ማረጋገጫ / TX ID ያስገቡ!")
                     
     elif st.session_state.tier_unlocked == 2:
         st.markdown("### 🔥 ልዩ ተጨማሪ (Advanced) ጥያቄዎችን ለመክፈት (30 ብር):")
-        st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 30.00 ብር")
+        show_payment_info("30.00")
         
         with st.form("tier3_form"):
-            tx_30 = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 30 ብር)")
+            method_30 = st.selectbox("የክፍያ መንገድ (30 ብር)", ["ቴሌብር (Telebirr)", "ባንክ (Bank Transfer)", "ሌላ / ቴሌግራም"], key="m30")
+            tx_30 = st.text_input("የክፍያ ማረጋገጫ / TX ID (ለ 30 ብር)")
             submit_30 = st.form_submit_button("30 ብር ከፍሎ ልዩ ጥያቄዎችን ክፈት")
             
             if submit_30:
@@ -213,7 +226,7 @@ else:
                     st.success("ክፍያዎ ተረጋግጧል! 30 ብር ልዩ ጥያቄዎች ተከፍተዋል...")
                     st.rerun()
                 else:
-                    st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) ያስገቡ!")
+                    st.error("እባክዎ የክፍያ ማረጋገጫ / TX ID ያስገቡ!")
     else:
         st.success("🌟 ሁሉንም ከፍተኛ ደረጃ ጥያቄዎች ከፍተዋል!")
 
@@ -227,10 +240,11 @@ else:
 
     st.markdown("---")
     st.markdown("### ✍️ የራስዎን ጥያቄ ወደ አፑ መጨመር ይፈልጋሉ? (50 ብር)")
-    st.info(f"📱 **ቴሌብር ቁጥር:** `{TELEBIRR_PHONE}`\n👤 **ስም:** {TELEBIRR_NAME}\n💰 **መጠን:** 50.00 ብር")
+    show_payment_info("50.00")
     
     with st.form("add_question_form"):
-        user_tx = st.text_input("የቴሌብር ትራንዛክሽን ቁጥር (TX ID ለ 50 ብር)")
+        method_50 = st.selectbox("የክፍያ መንገድ (50 ብር)", ["ቴሌብር (Telebirr)", "ባንክ (Bank Transfer)", "ሌላ / ቴሌግራም"], key="m50")
+        user_tx = st.text_input("የክፍያ ማረጋገጫ / TX ID (ለ 50 ብር)")
         new_q_text = st.text_input("የጥያቄው ጽሑፍ (Question)")
         opt1 = st.text_input("አማራጭ 1 (Option 1)")
         opt2 = st.text_input("አማራጭ 2 (Option 2)")
@@ -247,14 +261,14 @@ else:
                     "question": f"[User Added] {new_q_text}",
                     "options": [opt1, opt2, opt3, opt4],
                     "answer": correct_ans,
-                    "explanation": explanation_text if explanation_text else "ይህ ጥያቄ በተጠጣሚ የተጨመረ ነው።",
+                    "explanation": explanation_text if explanation_text else "ይህ ጥያቄ በተጠቃሚ የተጨመረ ነው።",
                     "reward": 0.001
                 }
                 st.session_state.question_bank.append(custom_question)
                 st.session_state.shuffled_questions.append(custom_question)
                 st.success("🎉 ጥያቄዎ በተሳካ ሁኔታ ወደ አፑ ተጨምሯል!")
             else:
-                st.error("እባክዎ የቴሌብር ትራንዛክሽን ቁጥር (TX ID) እና ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
+                st.error("እባክዎ የክፍያ ማረጋገጫ / TX ID እና ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
 
     if st.button("እንደገና ጀምር (Play Again)"):
         st.session_state.current_question_index = 0
