@@ -22,6 +22,8 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = ""
 if "users_db" not in st.session_state:
     st.session_state.users_db = {}
+if "used_tx_ids" not in st.session_state:
+    st.session_state.used_tx_ids = set()
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "coins" not in st.session_state:
@@ -32,6 +34,8 @@ if "selected_category" not in st.session_state:
     st.session_state.selected_category = "General Knowledge"
 if "current_question_index" not in st.session_state:
     st.session_state.current_question_index = 0
+if "question_start_time" not in st.session_state:
+    st.session_state.question_start_time = None
 if "answered_questions" not in st.session_state:
     st.session_state.answered_questions = set()
 if "tier_unlocked" not in st.session_state:
@@ -39,17 +43,13 @@ if "tier_unlocked" not in st.session_state:
 if "psych_game_done" not in st.session_state:
     st.session_state.psych_game_done = False
 
-# Stroop Focus Challenge State
-STROOP_ITEMS = [
-    {"word": "ቀይ (Red)", "ink_name": "ሰማያዊ (Blue)", "ink_hex": "#1E88E5"},
-    {"word": "አረንጓዴ (Green)", "ink_name": "ቀይ (Red)", "ink_hex": "#E53935"},
-    {"word": "ቢጫ (Yellow)", "ink_name": "አረንጓዴ (Green)", "ink_hex": "#43A047"},
-    {"word": "ሰማያዊ (Blue)", "ink_name": "ቢጫ (Yellow)", "ink_hex": "#FDD835"},
-]
-if "stroop_current" not in st.session_state:
-    st.session_state.stroop_current = random.choice(STROOP_ITEMS)
-if "stroop_solved_count" not in st.session_state:
-    st.session_state.stroop_solved_count = 0
+def validate_tx_id(tx_raw):
+    tx = tx_raw.strip().upper()
+    if len(tx) < 6:
+        return False, "የትራንዛክሽን ቁጥር (TX ID) ቢያንስ ከ 6 ፊደላት ወይም ቁጥሮች በላይ መሆን አለበት!"
+    if tx in st.session_state.used_tx_ids:
+        return False, "ይህ የትራንዛክሽን ቁጥር (TX ID) ቀድሞ ጥቅም ላይ ውሏል! እባክዎ ትክክለኛ እና አዲስ TX ID ያስገቡ።"
+    return True, tx
 
 def show_payment_info(amount_birr):
     st.info(
@@ -225,6 +225,7 @@ def fetch_online_questions(category):
 def load_category_questions(category):
     st.session_state.selected_category = category
     st.session_state.current_question_index = 0
+    st.session_state.question_start_time = time.time()
     st.session_state.answered_questions = set()
     qs = list(st.session_state.question_bank[category])
     random.shuffle(qs)
@@ -250,25 +251,31 @@ if not st.session_state.logged_in:
             custom_code = st.text_input("የራስዎን ኮድ ይፍጠሩ (Create Your Own Code / PIN, min 4 chars)", type="password")
             payment_method = st.selectbox("የክፍያ መንገድ ይምረጡ", ["ቴሌብር (Telebirr)", "ባንክ (Bank Transfer)", "ሌላ / ቴሌግራም"], key="pm_phone")
             tx_entry = st.text_input("የክፍያ ማረጋገጫ / ትራንዛክሽን ቁጥር (TX ID)", key="tx_phone")
+            confirm_paid = st.checkbox("10 ብር መላኬን እና ትክክለኛ TX ID ማስገባቴን አረጋግጣለሁ", key="chk_phone")
 
             submit_phone_btn = st.form_submit_button("ኮድ ፍጠር፣ ክፍያ አረጋግጥ እና ጀምር")
 
             if submit_phone_btn:
                 clean_phone = phone_input.strip()
+                tx_ok, tx_val = validate_tx_id(tx_entry)
                 if not clean_phone or len(clean_phone) < 9:
                     st.error("እባክዎ ትክክለኛ የስልክ ቁጥር ያስገቡ!")
                 elif not custom_code or len(custom_code) < 4:
                     st.error("የሚፈጥሩት ኮድ ቢያንስ ከ 4 ፊደላት ወይም ቁጥሮች በላይ መሆን አለበት!")
-                elif not tx_entry:
-                    st.error("እባክዎ የክፍያ ማረጋገጫ / ትራንዛክሽን ቁጥር ያስገቡ!")
+                elif not confirm_paid:
+                    st.error("እባክዎ ክፍያ መላክዎን የሚያረጋግጥ ሳጥን ምልክት ያድርጉ!")
+                elif not tx_ok:
+                    st.error(tx_val)
                 else:
                     if clean_phone in st.session_state.users_db and st.session_state.users_db[clean_phone] != custom_code:
                         st.error("ይህ ስልክ ቁጥር በሌላ ኮድ ተመዝግቧል። እባክዎ የቀድሞ ኮድዎን ያስገቡ!")
                     else:
                         st.session_state.users_db[clean_phone] = custom_code
+                        st.session_state.used_tx_ids.add(tx_val)
                         st.session_state.user_id = clean_phone
+                        st.session_state.question_start_time = time.time()
                         st.session_state.logged_in = True
-                        st.success("የራስዎ ኮድ ተፈጥሯል እና ክፍያዎ ተረጋግጧል! ወደ ጨዋታው እየገባ ነው...")
+                        st.success("የራስዎ ኮድ ተፈጥሯል እና TX ID ተመዝግቧል! ወደ ጨዋታው እየገባ ነው...")
                         st.rerun()
     else:
         with st.form("email_auth_form"):
@@ -276,21 +283,27 @@ if not st.session_state.logged_in:
             password_input = st.text_input("የሚስጥር ቁጥር (Password)", type="password")
             payment_method = st.selectbox("የክፍያ መንገድ ይምረጡ", ["ቴሌብር (Telebirr)", "ባንክ (Bank Transfer)", "ሌላ / ቴሌግራም"], key="pm_email")
             tx_entry = st.text_input("የክፍያ ማረጋገጫ / ትራንዛክሽን ቁጥር (TX ID)", key="tx_email")
+            confirm_paid_em = st.checkbox("10 ብር መላኬን እና ትክክለኛ TX ID ማስገባቴን አረጋግጣለሁ", key="chk_email")
 
             submit_btn = st.form_submit_button("ክፍያ አረጋግጥ እና ጀምር")
 
             if submit_btn:
+                tx_ok, tx_val = validate_tx_id(tx_entry)
                 if not email_input or "@" not in email_input or "." not in email_input:
                     st.error("እባክዎ ትክክለኛ ኢሜል ያስገቡ!")
                 elif not password_input or len(password_input) < 4:
                     st.error("ፓስወርዱ ቢያንስ ከ 4 ፊደላት በላይ መሆን አለበት!")
-                elif not tx_entry:
-                    st.error("እባክዎ የክፍያ ማረጋገጫ / ትራንዛክሽን ቁጥር ያስገቡ!")
+                elif not confirm_paid_em:
+                    st.error("እባክዎ ክፍያ መላክዎን የሚያረጋግጥ ሳጥን ምልክት ያድርጉ!")
+                elif not tx_ok:
+                    st.error(tx_val)
                 else:
                     st.session_state.users_db[email_input] = password_input
+                    st.session_state.used_tx_ids.add(tx_val)
                     st.session_state.user_id = email_input
+                    st.session_state.question_start_time = time.time()
                     st.session_state.logged_in = True
-                    st.success("ክፍያዎ ተረጋግጧል! ወደ ጨዋታው እየገባ ነው...")
+                    st.success("TX ID ተረጋግጧል! ወደ ጨዋታው እየገባ ነው...")
                     st.rerun()
     st.stop()
 
@@ -319,11 +332,24 @@ with tab1:
     total_q = len(st.session_state.shuffled_questions)
 
     if q_idx < total_q:
+        if st.session_state.question_start_time is None:
+            st.session_state.question_start_time = time.time()
+
+        elapsed = time.time() - st.session_state.question_start_time
+        remaining = max(0, int(10 - elapsed))
+
+        # 10 ሰከንድ ካለፈ ወዲያውኑ ወደ ቀጣይ ጥያቄ ያልፋል
+        if elapsed >= 10.0:
+            st.session_state.current_question_index += 1
+            st.session_state.question_start_time = time.time()
+            st.rerun()
+
         current_q = st.session_state.shuffled_questions[q_idx]
         
         st.subheader(f"[{st.session_state.selected_category}] ጥያቄ {q_idx + 1} ከ {total_q}")
         st.write(current_q["question"])
-        st.warning("⏱️ ለዚህ ጥያቄ የሚሰጥዎ ጊዜ: **10 ሰከንድ**")
+        timer_placeholder = st.empty()
+        timer_placeholder.warning(f"⏱️ ቀሪ ጊዜ: **{remaining} ሰከንድ** (10 ሰከንድ ሲያልቅ በራሱ ወደ ቀጣይ ጥያቄ ያልፋል)")
         
         selected_option = st.radio("መልስ ይምረጡ:", current_q["options"], key=f"q_radio_{st.session_state.selected_category}_{q_idx}")
         
@@ -344,11 +370,19 @@ with tab1:
                 st.error(f"ስህተት! ትክክለኛው መልስ፦ {current_q['answer']}")
                 st.info(f"💡 **ማብራሪያ:** {current_q['explanation']}")
             
-            with st.spinner("⏳ ወደ ቀጣይ ጥያቄ በ 3 ሰከንድ ውስጥ እያለፈ ነው..."):
-                time.sleep(3)
-            
+            time.sleep(1.5)
             st.session_state.current_question_index += 1
+            st.session_state.question_start_time = time.time()
             st.rerun()
+
+        # የ 1 ሰከንድ ቆጠራ Loop እስከ 10 ሰከንድ
+        for sec in range(remaining, 0, -1):
+            timer_placeholder.warning(f"⏱️ ቀሪ ጊዜ: **{sec} ሰከንድ** (10 ሰከንድ ሲያልቅ በራሱ ወደ ቀጣይ ጥያቄ ያልፋል)")
+            time.sleep(1)
+
+        st.session_state.current_question_index += 1
+        st.session_state.question_start_time = time.time()
+        st.rerun()
     else:
         st.success(f"🎉 የ **{st.session_state.selected_category}** ጥያቄዎችን ጨርሰዋል!")
         st.write(f"ጠቅላላ ያገኙት ሳንቲም: **{st.session_state.coins:,} Coins**")
@@ -362,17 +396,20 @@ with tab1:
                 tx_20 = st.text_input("የክፍያ ማረጋገጫ / TX ID (ለ 20 ብር)")
                 submit_20 = st.form_submit_button("20 ብር ከፍሎ ተጨማሪ ጥያቄዎችን ክፈት")
                 if submit_20:
-                    if tx_20:
+                    tx_ok, tx_val = validate_tx_id(tx_20)
+                    if tx_ok:
+                        st.session_state.used_tx_ids.add(tx_val)
                         st.session_state.tier_unlocked = 2
                         st.session_state.spin_chances += 3
                         fetch_online_questions(st.session_state.selected_category)
                         st.session_state.shuffled_questions = list(st.session_state.question_bank[st.session_state.selected_category])
                         random.shuffle(st.session_state.shuffled_questions)
                         st.session_state.current_question_index = 0
+                        st.session_state.question_start_time = time.time()
                         st.success("ክፍያዎ ተረጋግጧል! ተጨማሪ ጥያቄዎች ተከፍተዋል...")
                         st.rerun()
                     else:
-                        st.error("እባክዎ የክፍያ ማረጋገጫ / TX ID ያስገቡ!")
+                        st.error(tx_val)
                         
         elif st.session_state.tier_unlocked == 2:
             st.markdown("### 🔥 ልዩ ተጨማሪ (Advanced) ጥያቄዎችን ለመክፈት (30 ብር):")
@@ -382,17 +419,20 @@ with tab1:
                 tx_30 = st.text_input("የክፍያ ማረጋገጫ / TX ID (ለ 30 ብር)")
                 submit_30 = st.form_submit_button("30 ብር ከፍሎ ልዩ ጥያቄዎችን ክፈት")
                 if submit_30:
-                    if tx_30:
+                    tx_ok, tx_val = validate_tx_id(tx_30)
+                    if tx_ok:
+                        st.session_state.used_tx_ids.add(tx_val)
                         st.session_state.tier_unlocked = 3
                         st.session_state.spin_chances += 5
                         fetch_online_questions(st.session_state.selected_category)
                         st.session_state.shuffled_questions = list(st.session_state.question_bank[st.session_state.selected_category])
                         random.shuffle(st.session_state.shuffled_questions)
                         st.session_state.current_question_index = 0
+                        st.session_state.question_start_time = time.time()
                         st.success("ክፍያዎ ተረጋግጧል! ልዩ ጥያቄዎች ተከፍተዋል...")
                         st.rerun()
                     else:
-                        st.error("እባክዎ የክፍያ ማረጋገጫ / TX ID ያስገቡ!")
+                        st.error(tx_val)
 
         if st.session_state.coins >= 500000:
             st.markdown("---")
@@ -415,7 +455,9 @@ with tab1:
             
             submit_custom_q = st.form_submit_button("ጥያቄውን ወደ አፑ ጨምር")
             if submit_custom_q:
-                if user_tx and new_q_text and opt1 and opt2 and opt3 and opt4 and correct_ans:
+                tx_ok, tx_val = validate_tx_id(user_tx)
+                if tx_ok and new_q_text and opt1 and opt2 and opt3 and opt4 and correct_ans:
+                    st.session_state.used_tx_ids.add(tx_val)
                     custom_question = {
                         "question": f"[User Added] {new_q_text}",
                         "options": [opt1, opt2, opt3, opt4],
@@ -427,8 +469,10 @@ with tab1:
                     if target_cat == st.session_state.selected_category:
                         st.session_state.shuffled_questions.append(custom_question)
                     st.success("🎉 ጥያቄዎ በተሳካ ሁኔታ ወደ አፑ ተጨምሯል!")
+                elif not tx_ok:
+                    st.error(tx_val)
                 else:
-                    st.error("እባክዎ የክፍያ ማረጋገጫ / TX ID እና ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
+                    st.error("እባክዎ ሁሉንም ባዶ ቦታዎች በትክክል ይሙሉ!")
 
         if st.button("እንደገና ጀምር (Play Again)"):
             load_category_questions(st.session_state.selected_category)
@@ -465,6 +509,14 @@ with tab2:
     st.write("⚠️ **መመሪያ:** በቃሉ (Word) አትታለሉ! ጽሑፉ የተጻፈበትን **ቀለም (Ink Color)** ብቻ ይምረጡ። (+30 Coins)")
     st.info(f"🎯 በትክክል የመለሱት የትኩረት ዙሮች: **{st.session_state.stroop_solved_count}**")
 
+    STROOP_ITEMS = [
+        {"word": "ቀይ (Red)", "ink_name": "ሰማያዊ (Blue)", "ink_hex": "#1E88E5"},
+        {"word": "አረንጓዴ (Green)", "ink_name": "ቀይ (Red)", "ink_hex": "#E53935"},
+        {"word": "ቢጫ (Yellow)", "ink_name": "አረንጓዴ (Green)", "ink_hex": "#43A047"},
+        {"word": "ሰማያዊ (Blue)", "ink_name": "ቢጫ (Yellow)", "ink_hex": "#FDD835"},
+    ]
+    if "stroop_current" not in st.session_state:
+        st.session_state.stroop_current = random.choice(STROOP_ITEMS)
     stroop_item = st.session_state.stroop_current
     st.markdown(
         f"<div style='text-align:center; padding:18px; border-radius:10px; background:#111827; margin:10px 0;'>"
@@ -530,3 +582,4 @@ with tab2:
             st.rerun()
         else:
             st.warning("ለዚህ ጨዋታ ቢያንስ **5 Coins** ያስፈልግዎታል!")
+
